@@ -14,10 +14,23 @@ It is built upon a **high-fidelity, experimentally calibrated dynamic model** ca
 A closed-loop simulation environment is provided, including realistic actuator constraints, gas transport delays, stiff integration, and a fully specified multi-day outdoor disturbance scenario (irradiance, temperature, wind, and humidity).
 
 ---
+## IFAC World Congress 2026 - Bechmark competition
+
+The [IFAC World Congress 2026](https://ifac2026.org/) will feature a collection of benchmark problems addressing representative challenges in control systems. These problems aim to support standardized evaluation, stimulate methodological advances, and encourage collaboration across the research community.
+
+Our **Benchmark Control Problem on microalgae production systems** is one of the challenges selected for IFAC WC 2026. Important information about deadlines and registration is available on the Benchmark Challenge website:
+
+https://ifac2026.org/fairContents.do?FAIRMENU_IDX=21707&hl=ENG#scroll-2
+
+Participants are invited to read the benchmark challenge instructions in [Handbook_Benchmark_IFACWC.pdf](Handbook_Benchmark_IFACWC.pdf) and use the files in the `IFAC_WC_player/` folder.
+
+---
 
 ## Repository Structure
 
-The main entry point for users is the `player/` folder:
+The main entry point for users is the `player/` folder. 
+
+For users participating in the IFAC World Congress bechmark problem, is `IFAC_WC_player/` folder:
 
 ```text
 benchmarkmicroalgae/
@@ -30,13 +43,21 @@ benchmarkmicroalgae/
 │   ├── controller_Temp_HX_no_control.m % Example temperature controller
 │   └── ...
 │
+├── IFAC_WC_player/
+│   ├── Benchmark_main.m                % Main simulation launcher
+│   ├── controller_pH.m                 % Example pH controller
+│   ├── controller_DO.m                 % Example DO controller
+│   ├── controller_Temp_HX.m            % Example temperature controller
+│   └── ...
+│
 ├── simulate_benchmark_model.p          % Dynamic process model
 ├── Data_Benchmark.mat                  % Disturbance scenarios and parameters
 ├── load_data.m                         % Auxiliary script to load data and parameters
 ├── show_results.m                      % Auxiliary script to show the results
 └── README.md
-
 ```
+
+
 ## Requirements
 
 * MATLAB (tested with stiff ODE solvers)
