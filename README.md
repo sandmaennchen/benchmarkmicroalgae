@@ -22,7 +22,7 @@ Our **Benchmark Control Problem on microalgae production systems** is one of the
 
 https://ifac2026.org/fairContents.do?FAIRMENU_IDX=21707&hl=ENG#scroll-2
 
-Participants are invited to read the benchmark challenge instructions in [Handbook_Benchmark_IFACWC.pdf](Handbook_Benchmark_IFACWC.pdf) and use the files in the `IFAC_WC_player/` folder.
+Participants are invited to read the benchmark challenge instructions in [Handbook_Benchmark_IFACWC.pdf](IFAC_WC_player/Handbook_Benchmark_IFACWC.pdf) and use the files in the `IFAC_WC_player/` folder.
 
 ---
 
