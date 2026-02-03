@@ -48,6 +48,7 @@ benchmarkmicroalgae/
 │   ├── controller_pH.m                 % Example pH controller
 │   ├── controller_DO.m                 % Example DO controller
 │   ├── controller_Temp_HX.m            % Example temperature controller
+│   ├── Handbook_Benchmark_IFACWC.pdf   % Instructions for IFAC WC Benchmark competition 
 │   └── ...
 │
 ├── simulate_benchmark_model.p          % Dynamic process model
