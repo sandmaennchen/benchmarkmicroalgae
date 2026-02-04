@@ -22,7 +22,7 @@ Our **Benchmark Control Problem on microalgae production systems** is one of the
 
 https://ifac2026.org/fairContents.do?FAIRMENU_IDX=21707&hl=ENG#scroll-2
 
-Participants are invited to read the benchmark challenge instructions in [Handbook_Benchmark_IFACWC.pdf](IFAC_WC_player/Handbook_Benchmark_IFACWC.pdf) and use the files in the `IFAC_WC_player/` folder.
+Participants are invited to read the benchmark challenge instructions in [Handbook_Benchmark_IFACWC.pdf](IFAC_WC_player/Handbook_Benchmark_IFACWC.pdf) and use the files in the `IFAC_WC_player/` folder that can be downloaded from this [link](https://downgit.github.io/#/home?url=https://github.com/guzmanjl/benchmarkmicroalgae/tree/main/IFAC_WC_player).
 
 ---
 
@@ -30,7 +30,7 @@ Participants are invited to read the benchmark challenge instructions in [Handbo
 
 The main entry point for users is the `player/` folder. 
 
-For users participating in the IFAC World Congress bechmark problem, is `IFAC_WC_player/` folder:
+For users participating in the IFAC World Congress bechmark problem, is `IFAC_WC_player/` folder ([download](https://downgit.github.io/#/home?url=https://github.com/guzmanjl/benchmarkmicroalgae/tree/main/IFAC_WC_player)):
 
 ```text
 benchmarkmicroalgae/
