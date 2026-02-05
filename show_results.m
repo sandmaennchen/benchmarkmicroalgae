@@ -41,7 +41,7 @@ nexttile; plot(t_h, results.Depth, 'LineWidth',1.4);
 grid on; ylabel('[m]'); title('Depth');
 
 nexttile; plot(t_h, results.T, 'LineWidth',1.6);
-grid on; ylabel('[^\circC]'); xlabel('Time [h]'); title('Raceway Temperature (simulated)');
+grid on; ylabel('[^\circC]'); xlabel('Time [h]'); title('Raceway Temperature');
 
 figure('Color','w','Name','Gas injections');
 tiledlayout(2,1,'Padding','compact','TileSpacing','compact');
@@ -59,7 +59,7 @@ grid on; ylabel('[^\circC]'); xlabel('Time [h]'); title('HX inlet temperature (c
 
 % ===== Growth Rates & Factors =====
 figure('Color','w','Name','Rates & Factors');
-tiledlayout(4,2,'Padding','compact','TileSpacing','compact');
+tiledlayout(3,2,'Padding','compact','TileSpacing','compact');
 
 nexttile; plot(t_h, results.mu_I, 'LineWidth',1.4); grid on;
 ylabel('\mu_I [-]'); title('Light factor \mu_I');
@@ -73,14 +73,11 @@ ylabel('\mu_{pH} [-]'); title('pH factor \mu_{pH}');
 nexttile; plot(t_h, results.mu_DO, 'LineWidth',1.4); grid on;
 ylabel('\mu_{DO} [-]'); title('DO factor \mu_{DO}');
 
-nexttile; plot(t_h, results.P, 'LineWidth',1.4); grid on;
-ylabel('P [s^{-1}]'); title('Photosynthesis rate P(t)');
-
 nexttile; plot(t_h, results.mu, 'LineWidth',1.4); grid on;
 ylabel('\mu [s^{-1}]'); xlabel('Time [h]'); title('Growth rate \mu(t)');
 
 nexttile; plot(t_h, results.m, 'LineWidth',1.4); grid on;
-ylabel('m [s^{-1}]'); xlabel('Time [h]'); title('Growth rate m(t)');
+ylabel('m [s^{-1}]'); xlabel('Time [h]'); title('Respiration rate m(t)');
 
 % ===== Environmental variables =====
 figure('Color','w','Name','Environmental variables');
