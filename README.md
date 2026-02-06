@@ -24,6 +24,8 @@ https://ifac2026.org/fairContents.do?FAIRMENU_IDX=21707&hl=ENG#scroll-2
 
 Participants are invited to read the benchmark challenge instructions in [Handbook_Benchmark_IFACWC.pdf](IFAC_WC_player/Handbook_Benchmark_IFACWC.pdf) and use the files in the `IFAC_WC_player/` folder that can be downloaded from this [link](https://downgit.github.io/#/home?url=https://github.com/guzmanjl/benchmarkmicroalgae/tree/main/IFAC_WC_player).
 
+*IMPORTANT: Only solutions derived from a systematic, control-oriented methodology will be accepted. Solutions relying on trial-and-error approaches or hidden optimization procedures will not be considered.*
+
 ---
 
 ## Repository Structure
