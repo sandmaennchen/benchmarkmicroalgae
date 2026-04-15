@@ -14,8 +14,8 @@ ctrl.fn_Temp_HX = @controller_Temp_HX_no_control;
 
 %% ---------------- Simulation ----------------
 fprintf('\nRunning Benchmark Microalgae Raceway simulation...\n');
-[results] = simulate_benchmark_model(Data, ctrl);
-% [results] = simulate_benchmark_model_approximation(Data, ctrl);
+% [results] = simulate_benchmark_model(Data, ctrl);
+[results] = simulate_benchmark_model_approximation(Data, ctrl);
 
 %% ---------------- Results ----------------
 show_results;
