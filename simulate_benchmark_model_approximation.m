@@ -273,11 +273,11 @@ F_step = integrator('F_step', 'cvodes', dae, opts);
 end
 
 function x0 = i_initial_state(p, Env)
-Xalg0 = 500;
+Xalg0 = 0.5 * 1e3; % tv: ref results 0.5; TABLE: 0.32 [g/l]
 XO20 = p.KH_O2_ref * p.p_atm * p.y_O2;
-DIC0 = p.DIC_in;
-Cat0 = p.Cat_in;
-H0 = 1e-8;
+DIC0 = 0.014; % v
+Cat0 = 1.672669964353326e+01; % p.Cat_in;
+H0 = 1.582e-05; % v
 T0 = Env.Temp_ext(1);
 Depth0 = 0.15;
 V0 = max(p.Vsump + 1e-2, p.A * Depth0 + p.Vsump);
