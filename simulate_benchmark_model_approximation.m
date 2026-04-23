@@ -25,7 +25,9 @@ end
 
 refs = struct('pH', 8.0, 'DO', 150.0, 'T', 30.0);
 
-p = i_default_params();
+% p = i_default_params();
+p = create_p();
+
 if ~isempty(Env.Temp_ext)
     p.T_in_medium = Env.Temp_ext(1);
 end
@@ -267,8 +269,8 @@ d = up(7:10);
 xdot = ode_fun(x, u, d);
 
 dae = struct('x', x, 'p', up, 'ode', xdot);
-opts = struct('tf', dt, 'abstol', 1e-8, 'reltol', 1e-6);
-F_step = integrator('F_step', 'cvodes', dae, opts);
+opts = struct('tf', dt);%, 'abstol', 1e-8, 'reltol', 1e-6);
+F_step = integrator('F_step', 'rk', dae, opts);
 
 end
 
@@ -293,86 +295,6 @@ x(4) = max(x(4), 1e-10);
 x(5) = min(max(x(5), 1e-12), 1);
 x(6) = min(max(x(6), -5), 60);
 x(7) = max(x(7), p.Vsump + 1e-3);
-
-end
-
-function p = i_default_params()
-p = struct();
-p.L = 40;
-p.W = 1;
-p.A = p.L * p.W;
-p.rsump = 0.4;
-p.hsump = 1.12;
-p.Asump = pi * p.rsump^2;
-p.Vsump = p.Asump * p.hsump;
-
-p.rho_w = 1000;
-p.Cp_w = 4182;
-p.alpha_rad = 0.7;
-p.sigma = 5.67e-8;
-p.eps_w = 0.97;
-p.x_liner = 0.003;
-p.K_liner = 0.35;
-p.x_ug = 0.20;
-p.K_ug = 1.0;
-p.T_g = 20;
-p.k_m = 0.01;
-p.h_c = 10;
-p.P_mix = 200;
-p.UA_HX = 500;
-p.T_in_medium = 20;
-p.Lpw = 2;
-
-p.mu_max = 0.8/86400;
-p.Ka = 0.2;
-p.Ik = 200;
-p.n_hill = 1;
-p.T_min = 5;
-p.T_opt = 30;
-p.T_max = 40;
-p.pH_min = 6;
-p.pH_opt = 8;
-p.pH_max = 10;
-p.DO_max = 383.21;
-p.m_DO = 2;
-p.eta_X = 0.6;
-p.Y_CO2 = 1.92;
-p.Y_O2 = 1.41;
-p.M_CO2 = 44;
-p.M_O2 = 32;
-p.m_min = 0.02/86400;
-p.k_resp_I = 0.5;
-p.Q10 = 2.0;
-
-p.T_ref = 298.15;
-p.R_gas = 8.314;
-p.p_atm = 1.0;
-p.y_O2 = 0.21;
-p.y_CO2_atm = 3.8e-4;
-p.y_CO2_inj = 1.0;
-p.KH_O2_ref = 1.3e-3 * 1e3;
-p.KH_CO2_ref = 3.4e-2 * 1e3;
-p.C_O2 = 1700;
-p.C_CO2 = 2400;
-p.K1_ref = 4.3e-7 * 1e3;
-p.K2_ref = 4.7e-11 * 1e3;
-p.KW_ref = 1e-14 * 1e6;
-p.dH_K1 = -7500;
-p.dH_K2 = -15000;
-p.dH_KW = 55900;
-
-p.alpha_CO2 = 0.05;
-p.beta_CO2 = 0.7;
-p.alpha_O2 = 0.04;
-p.beta_O2 = 0.7;
-p.k_strip_CO2_O2 = 0.05;
-p.k_strip_O2_CO2 = 0.02;
-p.k_atm_CO2 = 1e-5;
-p.k_atm_O2 = 2e-5;
-p.k_pw_CO2 = 1e-5;
-p.k_pw_O2 = 2e-5;
-p.DIC_in = 2;
-p.Cat_in = 5;
 
 end
 
