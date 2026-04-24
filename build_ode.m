@@ -73,35 +73,35 @@ fCat = 1;
 fH = 1 - DIC*(dg_dH + 2*dh_dH) + KW/(H + p.reg_eps)^2;
 
 % Gas transfer
-Ug_CO2 = QCO2 / (p.Asump + p.reg_eps);
-Ug_O2  = Qair  / (p.Asump + p.reg_eps);
+Ug_CO2 = QCO2 / p.Asump; % equation (34)
+Ug_O2  = Qair  / p.Asump; % equation (35)
 
-kLa_CO2 = p.alpha_CO2 * (Ug_CO2 + 1e-10)^p.beta_CO2;
-kLa_O2  = p.alpha_O2  * (Ug_O2  + 1e-10)^p.beta_O2;
+kLa_CO2 = p.alpha_CO2 * (Ug_CO2)^p.beta_CO2; % equation (34)
+kLa_O2  = p.alpha_O2  * (Ug_O2)^p.beta_O2; % equation (35)
 
-kLa_CO2_eff = kLa_CO2 * p.Asump / (V + p.reg_eps);
-kLa_O2_eff  = kLa_O2  * p.Asump / (V + p.reg_eps);
+kLa_CO2_eff = kLa_CO2 * p.Asump / (V + p.reg_eps); % equation (36)
+kLa_O2_eff  = kLa_O2  * p.Asump / (V + p.reg_eps); % equation (37)
 
-k_strip_CO2_eff = p.k_strip_CO2_O2 * kLa_O2_eff;
-k_strip_O2_eff  = p.k_strip_O2_CO2 * kLa_CO2_eff;
+k_strip_CO2_eff = p.k_strip_CO2_O2 * kLa_O2_eff; % equation (38)
+k_strip_O2_eff  = p.k_strip_O2_CO2 * kLa_CO2_eff; % equation (39)
 
-Depth_val = (V - p.Vsump) / (p.W * p.L + p.reg_eps);
+Depth_val = (V - p.Vsump) / (p.W * p.L); % equation (6)
 
 % Biological model
-PAR = 0.46 * 4.56 * RadG;
-Iav = PAR / (p.Ka * Depth_val * Xalg + p.reg_eps) * (1 - exp(-p.Ka * Depth_val * Xalg));
-mu_I = Iav^p.n_hill / (p.Ik^p.n_hill + Iav^p.n_hill + p.reg_eps);
+PAR = 0.46 * 4.56 * RadG; % equation (2)
+Iav = PAR / (p.Ka * Depth_val * Xalg + p.reg_eps) * (1 - exp(-p.Ka * Depth_val * Xalg)); % equation (24)
+mu_I = Iav^p.n_hill / (p.Ik^p.n_hill + Iav^p.n_hill); % equation (25)
 
 mu_T = i_smooth_window(T, p.T_min, p.T_opt, p.T_max, p.reg_eps);
 pH_sym = -log(H / 1000) / log(10);
 mu_pH = i_smooth_window(pH_sym, p.pH_min, p.pH_opt, p.pH_max, p.reg_eps);
 
-DO_sat = 100 * XO2 / (Xeq_O2 + p.reg_eps);
-mu_DO = fmax(0, 1 - (DO_sat / p.DO_max)^p.m_DO);
+DO_sat = 100 * XO2 / (Xeq_O2 + p.reg_eps); % equation (27)
+mu_DO = fmax(0, 1 - (DO_sat / p.DO_max)^p.m_DO); % equation (28)
 
-P_rate = p.mu_max * mu_I * mu_T * mu_pH * mu_DO;
-mu_g = p.eta_X * P_rate;
-m_resp = p.m_min * (1 + p.k_resp_I * (1 - mu_I)) * p.Q10^((T - 20) / 10);
+P_rate = p.mu_max * mu_I * mu_T * mu_pH * mu_DO; % equation (29)
+mu_g = p.eta_X * P_rate; % equation (30)
+m_resp = p.m_min * (1 + p.k_resp_I * (1 - mu_I)) * p.Q10^((T - 20) / 10); % equation (31)
 
 % Thermal model
 Q_irrad = p.alpha_rad * p.A * RadG; % equation (9)
@@ -111,32 +111,32 @@ e_air = (RH/100) * 611.2 * exp(17.67 * Text / (Text + 243.5));
 Cs_vap = 0.622 * e_sat / ((p.p_atm * 101325) - e_sat + p.reg_eps) * p.rho_w;
 Ca_vap = 0.622 * e_air / ((p.p_atm * 101325) - e_air + p.reg_eps) * p.rho_w;
 
-m_dot_e = p.k_m * p.A * fmax(Cs_vap - Ca_vap, 0);
+m_dot_e = p.k_m * p.A * fmax(Cs_vap - Ca_vap, 0); % equation (13)
 lv = (2.501 - 0.00237 * T) * 1e6;
-Q_evap = -lv * m_dot_e;
+Q_evap = -lv * m_dot_e; % equation (14)
 V_dot_e = m_dot_e / p.rho_w;
 
 eps_sky = 0.70 + 5.95e-5 * (RH/100 * 4.596 * exp(17.27*Text/(237.3+Text)));
-T_sky_K = (eps_sky * (Text + 273.15)^4)^(1/4);
+T_sky_K = (eps_sky * (Text + 273.15)^4)^(1/4); % ???????
 Q_rad = p.sigma * p.eps_w * p.A * (T_sky_K^4 - T_K^4); % equation (10)
 
-R_pp = p.x_liner / p.K_liner + p.x_ug / p.K_ug;
-Q_cond = (p.A / (R_pp + p.reg_eps)) * (p.T_g - T);
-Q_conv = p.h_c * p.A * (Text - T);
+R_pp = p.x_liner / p.K_liner + p.x_ug / p.K_ug; % equation (11)
+Q_cond = (p.A / (R_pp + p.reg_eps)) * (p.T_g - T); % equation (12)
+Q_conv = p.h_c * p.A * (Text - T); % equation (15)
 
-Q_dil = p.rho_w * p.Cp_w * Qd * p.T_in_medium;
-Q_harv = -p.rho_w * p.Cp_w * Qh * T;
-Q_mix = p.P_mix;
+Q_dil = p.rho_w * p.Cp_w * Qd * p.T_in_medium; % equation (16)
+Q_harv = -p.rho_w * p.Cp_w * Qh * T; % equation (17)
+Q_mix = p.P_mix; % equation (18)
 
-Cw_HX = p.rho_w * p.Cp_w * Qw;
+Cw_HX = p.rho_w * p.Cp_w * Qw; % equation (21)
 
-eps_HX = 1 - exp(-p.UA / (Cw_HX + p.reg_eps));
-Q_HX = Cw_HX * (Tin_hx - T) * eps_HX;
+eps_HX = 1 - exp(-p.UA / (Cw_HX + p.reg_eps)); % equation (22)
+Q_HX = Cw_HX * (Tin_hx - T) * eps_HX; % equation (23)
 
 Q_Sigma = Q_irrad + Q_rad + Q_cond + Q_evap + Q_conv + Q_dil + Q_harv + Q_mix + Q_HX; % equation (8)
 
 % Balances
-V_dot = Qd - Qh - V_dot_e; % equation (7)
+V_dot = Qd - Qh - V_dot_e; % equation (32)
 
 T_dot = Q_Sigma / (p.rho_w * p.Cp_w * V + p.reg_eps) - (T / (V + p.reg_eps)) * V_dot;
 Xalg_dot = (mu_g - m_resp) * Xalg - (Qd / (V + p.reg_eps)) * Xalg;
