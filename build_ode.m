@@ -44,33 +44,36 @@ Text = d(3);
 T_K = T + 273.15;
 
 % Gas-liquid equilibria
-KH_O2  = p.KH_O2_ref  * exp(p.C_O2  * (1/T_K - 1/p.T_ref));
-KH_CO2 = p.KH_CO2_ref * exp(p.C_CO2 * (1/T_K - 1/p.T_ref));
+KH_O2  = p.KH_O2_ref  * exp(p.C_O2  * (1/T_K - 1/p.T_ref)); % equation (60)
+KH_CO2 = p.KH_CO2_ref * exp(p.C_CO2 * (1/T_K - 1/p.T_ref)); % equation (60)
 
-Xeq_O2   = KH_O2 * p.p_atm * p.y_O2;
-COeq_CO2 = KH_CO2 * p.p_atm * p.y_CO2_atm;
-COinj_CO2 = KH_CO2 * p.p_atm * p.y_CO2_inj;
+Xeq_O2   = KH_O2 * p.p_atm * p.y_O2; % equation (57)
+COeq_CO2 = KH_CO2 * p.p_atm * p.y_CO2_atm; % equation (58)
+COinj_CO2 = KH_CO2 * p.p_atm * p.y_CO2_inj; % equation (59)
 
-K1 = p.K1_ref * exp(-p.dH_K1/p.R_gas * (1/T_K - 1/p.T_ref));
-K2 = p.K2_ref * exp(-p.dH_K2/p.R_gas * (1/T_K - 1/p.T_ref));
-KW = p.KW_ref * exp(-p.dH_KW/p.R_gas * (1/T_K - 1/p.T_ref));
+K1 = p.K1_ref * exp(-p.dH_K1/p.R_gas * (1/T_K - 1/p.T_ref)); % equation (61)
+K2 = p.K2_ref * exp(-p.dH_K2/p.R_gas * (1/T_K - 1/p.T_ref)); % equation (62)
+KW = p.KW_ref * exp(-p.dH_KW/p.R_gas * (1/T_K - 1/p.T_ref)); % equation (63)
 
 % Carbonate species
-Delta = H^2 + H*K1 + K1*K2;
-CO2_aq = DIC * H^2 / (Delta + p.reg_eps);
-HCO3 = DIC * H * K1 / (Delta + p.reg_eps);
-CO3 = DIC * K1 * K2 / (Delta + p.reg_eps);
+Delta = H^2 + H*K1 + K1*K2; % equation (40)
+CO2_aq = DIC * H^2 / (Delta + p.reg_eps); % equation (41)
+HCO3 = DIC * H * K1 / (Delta + p.reg_eps); % equation (42)
+CO3 = DIC * K1 * K2 / (Delta + p.reg_eps); % equation (43)
+%!!!!!!! Missing equation (44) !!!!!!!!!
 
 % Electrically coupled proton dynamics terms
-g_ratio = HCO3 / (DIC + p.reg_eps);
-h_ratio = CO3  / (DIC + p.reg_eps);
-dDelta_dH = 2*H + K1;
-dg_dH = K1*(K1*K2 - H^2) / (Delta + p.reg_eps)^2;
-dh_dH = -K1*K2 * dDelta_dH / (Delta + p.reg_eps)^2;
+g_ratio = HCO3 / (DIC + p.reg_eps); % equation (52)
+h_ratio = CO3  / (DIC + p.reg_eps); % equation (52)
+dDelta_dH = 2*H + K1; % equation (55)
+dg_dH = K1*(K1*K2 - H^2) / (Delta + p.reg_eps)^2; % equation (56)
+dh_dH = -K1*K2 * dDelta_dH / (Delta + p.reg_eps)^2; % equation (56)
 
-fDIC = -(g_ratio + 2*h_ratio);
-fCat = 1;
-fH = 1 - DIC*(dg_dH + 2*dh_dH) + KW/(H + p.reg_eps)^2;
+fDIC = -(g_ratio + 2*h_ratio); % equation (50)
+fCat = 1; % equation (50)
+% !!!!!!!!!!!!!!!
+fH = 1 - DIC*(dg_dH + 2*dh_dH) + KW/(H + p.reg_eps)^2; % equation (51)
+% !!!!!!!!!!!!!!!
 
 % Gas transfer
 Ug_CO2 = QCO2 / p.Asump; % equation (34)
@@ -138,8 +141,8 @@ Q_Sigma = Q_irrad + Q_rad + Q_cond + Q_evap + Q_conv + Q_dil + Q_harv + Q_mix + 
 % Balances
 V_dot = Qd - Qh - V_dot_e; % equation (32)
 
-T_dot = Q_Sigma / (p.rho_w * p.Cp_w * V + p.reg_eps) - (T / (V + p.reg_eps)) * V_dot;
-Xalg_dot = (mu_g - m_resp) * Xalg - (Qd / (V + p.reg_eps)) * Xalg;
+T_dot = Q_Sigma / (p.rho_w * p.Cp_w * V + p.reg_eps) - (T / (V + p.reg_eps)) * V_dot; % equation (7)
+Xalg_dot = (mu_g - m_resp) * Xalg - (Qd / (V + p.reg_eps)) * Xalg; % equation (33)
 
 DIC_dot = (Qd / (V + p.reg_eps)) * (p.DIC_in - DIC) ...
         - P_rate * Xalg / (p.Y_CO2 / p.M_CO2) ...
@@ -147,9 +150,9 @@ DIC_dot = (Qd / (V + p.reg_eps)) * (p.DIC_in - DIC) ...
         + kLa_CO2_eff * (COinj_CO2 - CO2_aq) ...
         + p.k_atm_CO2 * (COeq_CO2 - CO2_aq) ...
         + p.k_pw_CO2 * p.W * p.Lpw * Depth_val / (V + p.reg_eps) * (COeq_CO2 - CO2_aq) ...
-        + k_strip_CO2_eff * (COeq_CO2 - CO2_aq);
+        + k_strip_CO2_eff * (COeq_CO2 - CO2_aq); % equation (45)
 
-Cat_dot = (Qd / (V + p.reg_eps)) * (p.Cat_in - Cat);
+Cat_dot = (Qd / (V + p.reg_eps)) * (p.Cat_in - Cat); % equation (46)
 
 XO2_dot = (Qd / (V + p.reg_eps)) * (Xeq_O2 - XO2) ...
         + P_rate * Xalg / (p.Y_O2 / p.M_O2) ...
@@ -157,17 +160,17 @@ XO2_dot = (Qd / (V + p.reg_eps)) * (Xeq_O2 - XO2) ...
         + kLa_O2_eff * (Xeq_O2 - XO2) ...
         + p.k_atm_O2 * (Xeq_O2 - XO2) ...
         + p.k_pw_O2 * p.W * p.Lpw * Depth_val / (V + p.reg_eps) * (Xeq_O2 - XO2) ...
-        - k_strip_O2_eff * XO2;
+        - k_strip_O2_eff * XO2; % equation (47)
 
-H_dot = -(fDIC * DIC_dot + fCat * Cat_dot) / (fH + p.reg_eps);
+H_dot = -(fDIC * DIC_dot + fCat * Cat_dot) / (fH + p.reg_eps); % equation (49)
 
 xdot = vertcat(Xalg_dot, XO2_dot, DIC_dot, Cat_dot, H_dot, T_dot, V_dot);
 
 % Output map
-pH_out = -log(H / 1000) / log(10);
-DO_out = 100 * XO2 / (Xeq_O2 + p.reg_eps);
-Xalg_gL = Xalg / 1000;
-Depth_out = (V - p.Vsump) / (p.W * p.L + p.reg_eps);
+pH_out = -log(H / 1000) / log(10); % equation (3)
+DO_out = 100 * XO2 / (Xeq_O2 + p.reg_eps); % equation (4)
+Xalg_gL = Xalg / 1000; % equation (5)
+Depth_out = (V - p.Vsump) / (p.W * p.L + p.reg_eps); % equation (6)
 
 y = vertcat(pH_out, DO_out, Xalg_gL, Depth_out);
 
