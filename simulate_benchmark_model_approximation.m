@@ -54,7 +54,10 @@ Qhx_cmd  = zeros(N,1);
 Tin_hx   = zeros(N,1);
 
 st_CtrlSignals = struct();
-state = struct();
+state_pH_CO2 = struct();
+state_DO_air = struct();
+state_HD = struct();
+state_Temp_HX = struct();
 
 % QCO2_max = 20/1000/60;
 % Qair_max = 500/1000/60;
@@ -112,13 +115,13 @@ for k = 1:N
 
     future = project_future(t, Env, k);
 
-    [st_CtrlSignals, state] = ctrl.fn_pH_CO2(Timeline, obs, refs, env, future, st_CtrlSignals, state); % Qco2
+    [st_CtrlSignals, state_pH_CO2] = ctrl.fn_pH_CO2(Timeline, obs, refs, env, future, st_CtrlSignals, state_pH_CO2); % Qco2
 
-    [st_CtrlSignals, state] = ctrl.fn_DO_air(Timeline, obs, refs, env, future, st_CtrlSignals, state); % Qair
+    [st_CtrlSignals, state_DO_air] = ctrl.fn_DO_air(Timeline, obs, refs, env, future, st_CtrlSignals, state_DO_air); % Qair
 
-    [st_CtrlSignals, state] = ctrl.fn_HD(Timeline, obs, refs, env, future, st_CtrlSignals, state); % Qd_bin, Qh_bin
+    [st_CtrlSignals, state_HD] = ctrl.fn_HD(Timeline, obs, refs, env, future, st_CtrlSignals, state_HD); % Qd_bin, Qh_bin
 
-    [st_CtrlSignals, state] = ctrl.fn_Temp_HX(Timeline, obs, refs, env, future, st_CtrlSignals, state); % Qhx, Tin_hx
+    [st_CtrlSignals, state_Temp_HX] = ctrl.fn_Temp_HX(Timeline, obs, refs, env, future, st_CtrlSignals, state_Temp_HX); % Qhx, Tin_hx
 
     QCO2_cmd(k) = st_CtrlSignals.Qco2;
     Qair_cmd(k) = st_CtrlSignals.Qair;
@@ -224,6 +227,7 @@ results.J = struct();
 results.J.pH = mean((pH - refs.pH).^2);
 results.J.DO = mean((DO - refs.DO).^2);
 results.J.T  = mean((T - refs.T).^2);
+
 
 end
 
