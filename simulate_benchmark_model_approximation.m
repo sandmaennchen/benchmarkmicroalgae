@@ -7,7 +7,7 @@ N = numel(t);
 
 dt = 60;
 
-refs = struct('pH', 7.5, 'DO', 150.0, 'T', 25.0);
+refs = struct('pH', 8.0, 'DO', 150.0, 'T', 30.0);
 
 p = create_p();
 
@@ -101,8 +101,6 @@ for k = 1:N
     obs.Depth = Depth(k);
     obs.Xalg_gL = X_gL(k);
     obs.T = T(k);
-    % obs.T = Env.Temp_ext(k);
-    % obs
 
     Xalg(k) = xk(1);
     XO2(k) = xk(2);
