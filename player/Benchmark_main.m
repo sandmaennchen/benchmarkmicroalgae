@@ -1,5 +1,8 @@
 %% ===== Benchmark Microalgae Raceway Reactor =====
-clear; clc; rng(42,'twister');
+clear; 
+close all;
+clc;
+rng(42,'twister');
 addpath('..');
 
 %% ---------------- Data load ----------------

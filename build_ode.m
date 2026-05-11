@@ -1,4 +1,4 @@
-function [ode_fun, out_fun] = build_ode(p)
+function [ode_fun, out_fun, fun_growth_terms] = build_ode(p)
 %BUILD_ODE Build CasADi ODE and output map for raceway model.
 %   [ode_fun, out_fun] = build_ode(p)
 %   - ode_fun(x,u,d) returns xdot for x=[Xalg XO2 DIC Cat H T V].'
@@ -15,9 +15,9 @@ import casadi.*
 % p = create_p();
 
 % Symbolic variables
-x = MX.sym('x', 7);   % [Xalg, XO2, DIC, Cat, H, T, V]
-u = MX.sym('u', 6);   % [QCO2, Qair, Qd, Qh, Qw, Tin_hx]
-d = MX.sym('d', 4);   % [RadG, RH, Text, Uwind]
+x = SX.sym('x', 7);   % [Xalg, XO2, DIC, Cat, H, T, V]
+u = SX.sym('u', 6);   % [QCO2, Qair, Qd, Qh, Qw, Tin_hx]
+d = SX.sym('d', 4);   % [RadG, RH, Text, Uwind]
 
 % States
 Xalg = x(1);
@@ -66,13 +66,13 @@ CO3 = DIC * K1 * K2 / (Delta + p.reg_eps); % equation (43)
 g_ratio = HCO3 / (DIC + p.reg_eps); % equation (52)
 h_ratio = CO3  / (DIC + p.reg_eps); % equation (52)
 dDelta_dH = 2*H + K1; % equation (55)
-dg_dH = K1*(K1*K2 - H^2) / (Delta + p.reg_eps)^2; % equation (56)
-dh_dH = -K1*K2 * dDelta_dH / (Delta + p.reg_eps)^2; % equation (56)
+dg_dH = K1*(K1*K2 - H^2) / (Delta)^2; % equation (56)
+dh_dH = -K1*K2 * dDelta_dH / (Delta)^2; % equation (56)
 
 fDIC = -(g_ratio + 2*h_ratio); % equation (50)
 fCat = 1; % equation (50)
 % !!!!!!!!!!!!!!!
-fH = 1 - DIC*(dg_dH + 2*dh_dH) + KW/(H + p.reg_eps)^2; % equation (51)
+fH = 1 - DIC*(dg_dH + 2*dh_dH) + KW/(H)^2; % equation (51)
 % !!!!!!!!!!!!!!!
 
 % Gas transfer
@@ -92,15 +92,16 @@ Depth_val = (V - p.Vsump) / (p.W * p.L); % equation (6)
 
 % Biological model
 PAR = 0.46 * 4.56 * RadG; % equation (2)
-Iav = PAR / (p.Ka * Depth_val * Xalg + p.reg_eps) * (1 - exp(-p.Ka * Depth_val * Xalg)); % equation (24)
+Iav = PAR / (p.Ka * Depth_val * Xalg + 1e-6) * (1 - exp(-p.Ka * Depth_val * Xalg)); % equation (24)
 mu_I = Iav^p.n_hill / (p.Ik^p.n_hill + Iav^p.n_hill); % equation (25)
 
 mu_T = i_smooth_window(T, p.T_min, p.T_opt, p.T_max, p.reg_eps);
-pH_sym = -log(H / 1000) / log(10);
+pH_sym = -log(fmax(H, 1e-9) / 1000) / log(10);
 mu_pH = i_smooth_window(pH_sym, p.pH_min, p.pH_opt, p.pH_max, p.reg_eps);
 
-DO_sat = 100 * XO2 / (Xeq_O2 + p.reg_eps); % equation (27)
-mu_DO = fmax(0, 1 - (DO_sat / p.DO_max)^p.m_DO); % equation (28)
+DO_sat = 100 * XO2 / Xeq_O2; % equation (27)
+% mu_DO = fmax(0, 1 - (DO_sat / p.DO_max)^p.m_DO); % equation (28)
+mu_DO = fmax(0, 1 - (fmax(DO_sat, 1e-9) / p.DO_max)^p.m_DO);
 
 P_rate = p.mu_max * mu_I * mu_T * mu_pH * mu_DO; % equation (29)
 mu_g = p.eta_X * P_rate; % equation (30)
@@ -109,10 +110,15 @@ m_resp = p.m_min * (1 + p.k_resp_I * (1 - mu_I)) * p.Q10^((T - 20) / 10); % equa
 % Thermal model
 Q_irrad = p.alpha_rad * p.A * RadG; % equation (9)
 
-e_sat = 611.2 * exp(17.67 * T / (T + 243.5));
+e_sat = 611.2 * exp(17.67 * T / (T + 243.5)); % [Not in paper] (sauce: https://en.wikipedia.org/wiki/Tetens_equation)
 e_air = (RH/100) * 611.2 * exp(17.67 * Text / (Text + 243.5));
-Cs_vap = 0.622 * e_sat / ((p.p_atm * 101325) - e_sat + p.reg_eps) * p.rho_w;
-Ca_vap = 0.622 * e_air / ((p.p_atm * 101325) - e_air + p.reg_eps) * p.rho_w;
+% Cs_vap = 0.622 * e_sat / ((p.p_atm * 101325) - e_sat + p.reg_eps) * p.rho_w;
+% Ca_vap = 0.622 * e_air / ((p.p_atm * 101325) - e_air + p.reg_eps) *
+% p.rho_w; % results in a number enough to boil a swimming pool in minutes
+Rv = 461.52; % J/(Kg K) Specific gas constant for water vapour (https://search.r-project.org/CRAN/refmans/humidity/html/Rw.html)
+% Using ideal gas law C = P / (Rv * T) (Kg / m^3)
+Cs_vap = e_sat / (Rv * T_K);
+Ca_vap = e_air / (Rv * (Text + 273.15));
 
 m_dot_e = p.k_m * p.A * fmax(Cs_vap - Ca_vap, 0); % equation (13)
 lv = (2.501 - 0.00237 * T) * 1e6;
@@ -145,8 +151,8 @@ T_dot = Q_Sigma / (p.rho_w * p.Cp_w * V + p.reg_eps) - (T / (V + p.reg_eps)) * V
 Xalg_dot = (mu_g - m_resp) * Xalg - (Qd / (V + p.reg_eps)) * Xalg; % equation (33)
 
 DIC_dot = (Qd / (V + p.reg_eps)) * (p.DIC_in - DIC) ...
-        - P_rate * Xalg / (p.Y_CO2 / p.M_CO2) ...
-        + m_resp * Xalg / (p.Y_CO2 / p.M_CO2) ...
+        - P_rate * Xalg * (p.Y_CO2 / p.M_CO2) ...
+        + m_resp * Xalg * (p.Y_CO2 / p.M_CO2) ...
         + kLa_CO2_eff * (COinj_CO2 - CO2_aq) ...
         + p.k_atm_CO2 * (COeq_CO2 - CO2_aq) ...
         + p.k_pw_CO2 * p.W * p.Lpw * Depth_val / (V + p.reg_eps) * (COeq_CO2 - CO2_aq) ...
@@ -155,8 +161,8 @@ DIC_dot = (Qd / (V + p.reg_eps)) * (p.DIC_in - DIC) ...
 Cat_dot = (Qd / (V + p.reg_eps)) * (p.Cat_in - Cat); % equation (46)
 
 XO2_dot = (Qd / (V + p.reg_eps)) * (Xeq_O2 - XO2) ...
-        + P_rate * Xalg / (p.Y_O2 / p.M_O2) ...
-        - m_resp * Xalg / (p.Y_O2 / p.M_O2) ...
+        + P_rate * Xalg * (p.Y_O2 / p.M_O2) ...
+        - m_resp * Xalg * (p.Y_O2 / p.M_O2) ...
         + kLa_O2_eff * (Xeq_O2 - XO2) ...
         + p.k_atm_O2 * (Xeq_O2 - XO2) ...
         + p.k_pw_O2 * p.W * p.Lpw * Depth_val / (V + p.reg_eps) * (Xeq_O2 - XO2) ...
@@ -165,6 +171,7 @@ XO2_dot = (Qd / (V + p.reg_eps)) * (Xeq_O2 - XO2) ...
 H_dot = -(fDIC * DIC_dot + fCat * Cat_dot) / (fH + p.reg_eps); % equation (49)
 
 xdot = vertcat(Xalg_dot, XO2_dot, DIC_dot, Cat_dot, H_dot, T_dot, V_dot);
+% xdot = [0; 0; 0; 0; 0; 0; 0];
 
 % Output map
 pH_out = -log(H / 1000) / log(10); % equation (3)
@@ -173,9 +180,13 @@ Xalg_gL = Xalg / 1000; % equation (5)
 Depth_out = (V - p.Vsump) / (p.W * p.L + p.reg_eps); % equation (6)
 
 y = vertcat(pH_out, DO_out, Xalg_gL, Depth_out);
+growth_terms = vertcat(mu_I, mu_T, mu_pH, mu_DO, mu_g, m_resp, P_rate);
+fun_growth_terms = Function('fun_growth_terms', {x, u, d}, {growth_terms}, {'x', 'u', 'd'}, {'growth_terms'});
 
 ode_fun = Function('ode_fun', {x, u, d}, {xdot}, {'x','u','d'}, {'xdot'});
 out_fun = Function('out_fun', {x, u, d}, {y}, {'x','u','d'}, {'y'});
+debug_flux_vec = vertcat(Q_Sigma, Q_irrad, Q_rad, Q_cond, Q_evap, Q_conv, Q_dil, Q_harv, Q_mix, Q_HX);
+debug_flux = Function('debug_flux', {x, u, d}, {debug_flux_vec}, {'x', 'u', 'd'}, {'debug_flux_vec'});
 
 end
 

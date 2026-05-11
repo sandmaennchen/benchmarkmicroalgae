@@ -2,53 +2,45 @@ function [results] = simulate_benchmark_model_approximation(Data, ctrl)
 % Approximate benchmark simulator with CasADi-integrated continuous dynamics.
 % Uses build_ode(p) inside the closed-loop simulation at each sample.
 
-if nargin < 2
-    error('simulate_benchmark_model_approximation requires Data and ctrl inputs.');
-end
-
-if exist('casadi.MX', 'class') ~= 8
-    error(['CasADi is not available in MATLAB path. ' ...
-           'Install CasADi and ensure import works before running this simulator.']);
-end
-
-[t, Env] = i_build_time_and_env(Data);
+[t, Env] = build_time_and_env(Data);
 N = numel(t);
-if N < 1
-    error('Data does not contain valid samples.');
-end
 
-if N > 1
-    dt = max(1, t(2) - t(1));
-else
-    dt = 60;
-end
+dt = 60;
 
-refs = struct('pH', 8.0, 'DO', 150.0, 'T', 30.0);
+refs = struct('pH', 7.5, 'DO', 150.0, 'T', 25.0);
 
-% p = i_default_params();
 p = create_p();
 
 if ~isempty(Env.Temp_ext)
     p.T_in_medium = Env.Temp_ext(1);
 end
 
-[ode_fun, out_fun] = build_ode(p);
-F_step = i_build_integrator(ode_fun, dt);
+[ode_fun, out_fun, growth_terms_fun] = build_ode(p);
+F_step = build_integrator(ode_fun, dt);
 
-xk = i_initial_state(p, Env);
+x0 = get_initial_state(p, Env);
+xk = x0;
 
 pH = zeros(N,1);
 DO = zeros(N,1);
 Depth = zeros(N,1);
 X_gL = zeros(N,1);
-T = zeros(N,1);
 
 Xalg = zeros(N,1);
 XO2 = zeros(N,1);
 DIC = zeros(N,1);
 Cat = zeros(N,1);
 H = zeros(N,1);
+T = zeros(N,1);
 V = zeros(N,1);
+
+mu_I = zeros(N, 1);
+mu_T = zeros(N, 1);
+mu_pH = zeros(N, 1);
+mu_DO = zeros(N, 1);
+mu = zeros(N, 1);
+m = zeros(N, 1);
+P = zeros(N, 1);
 
 QCO2_cmd = zeros(N,1);
 Qair_cmd = zeros(N,1);
@@ -61,13 +53,11 @@ Qh       = zeros(N,1);
 Qhx_cmd  = zeros(N,1);
 Tin_hx   = zeros(N,1);
 
-st_pH = struct();
-st_DO = struct();
-st_HD = struct();
-st_TX = struct();
+st_CtrlSignals = struct();
+state = struct();
 
-QCO2_max = 20/1000/60;
-Qair_max = 500/1000/60;
+% QCO2_max = 20/1000/60;
+% Qair_max = 500/1000/60;
 Qd_rate  = 20/1000/60;
 Qh_rate  = 20/1000/60;
 Qw_min = 0;
@@ -78,23 +68,6 @@ Tin_max = 50;
 for k = 1:N
     tk = t(k);
     secday = rem(tk, 86400);
-
-    dk = [Env.RadG(k); Env.RH(k); Env.Temp_ext(k); Env.Wind(k)];
-    yk = full(out_fun(xk, zeros(6,1), dk));
-
-    pH(k) = yk(1);
-    DO(k) = yk(2);
-    X_gL(k) = yk(3);
-    Depth(k) = yk(4);
-    T(k) = xk(6);
-
-    Xalg(k) = xk(1);
-    XO2(k) = xk(2);
-    DIC(k) = xk(3);
-    Cat(k) = xk(4);
-    H(k) = xk(5);
-    V(k) = xk(7);
-
     Timeline = struct();
     Timeline.dt = dt;
     Timeline.index = k;
@@ -103,13 +76,6 @@ for k = 1:N
     Timeline.hour = floor(secday/3600);
     Timeline.min = floor(rem(secday,3600)/60);
 
-    obs = struct();
-    obs.pH = pH(k);
-    obs.DO = DO(k);
-    obs.Depth = Depth(k);
-    obs.Xalg_gL = X_gL(k);
-    obs.T = T(k);
-
     env = struct();
     env.RadGlobal = Env.RadG(k);
     env.RadPAR = Env.RadPAR(k);
@@ -117,64 +83,63 @@ for k = 1:N
     env.RH = Env.RH(k);
     env.Wind = Env.Wind(k);
 
-    future = i_build_future(t, Env, k);
+    dk = [Env.RadG(k); Env.RH(k); Env.Temp_ext(k); Env.Wind(k)];
+    yk = full(out_fun(xk, zeros(6,1), dk));
+    pH(k) = yk(1);
+    DO(k) = yk(2);
+    X_gL(k) = yk(3);
+    Depth(k) = yk(4);
+    
+    obs = struct();
+    obs.pH = pH(k);
+    obs.DO = DO(k);
+    obs.Depth = Depth(k);
+    obs.Xalg_gL = X_gL(k);
+    obs.T = T(k);
 
-    st_cmd = struct('Qco2',0,'Qair',0,'Qd_bin',0,'Qh_bin',0,'Qhx',0,'Tin_hx',obs.T);
+    Xalg(k) = xk(1);
+    XO2(k) = xk(2);
+    DIC(k) = xk(3);
+    Cat(k) = xk(4);
+    H(k) = xk(5);
+    T(k) = xk(6);
+    V(k) = xk(7);
 
-    if isfield(ctrl, 'fn_pH_CO2') && ~isempty(ctrl.fn_pH_CO2)
-        [st_tmp, st_pH] = ctrl.fn_pH_CO2(Timeline, obs, refs, env, future, st_cmd, st_pH);
-        st_cmd.Qco2 = i_getfield_or(st_tmp, 'Qco2', st_cmd.Qco2);
-    end
-    if isfield(ctrl, 'fn_DO_air') && ~isempty(ctrl.fn_DO_air)
-        [st_tmp, st_DO] = ctrl.fn_DO_air(Timeline, obs, refs, env, future, st_cmd, st_DO);
-        st_cmd.Qair = i_getfield_or(st_tmp, 'Qair', st_cmd.Qair);
-    end
-    if isfield(ctrl, 'fn_HD') && ~isempty(ctrl.fn_HD)
-        [st_tmp, st_HD] = ctrl.fn_HD(Timeline, obs, refs, env, future, st_cmd, st_HD);
-        st_cmd.Qd_bin = i_getfield_or(st_tmp, 'Qd_bin', st_cmd.Qd_bin);
-        st_cmd.Qh_bin = i_getfield_or(st_tmp, 'Qh_bin', st_cmd.Qh_bin);
-    end
-    if isfield(ctrl, 'fn_Temp_HX') && ~isempty(ctrl.fn_Temp_HX)
-        [st_tmp, st_TX] = ctrl.fn_Temp_HX(Timeline, obs, refs, env, future, st_cmd, st_TX);
-        st_cmd.Qhx = i_getfield_or(st_tmp, 'Qhx', st_cmd.Qhx);
-        st_cmd.Tin_hx = i_getfield_or(st_tmp, 'Tin_hx', st_cmd.Tin_hx);
-    end
 
-    QCO2_cmd(k) = i_getfield_or(st_cmd, 'Qco2', 0);
-    Qair_cmd(k) = i_getfield_or(st_cmd, 'Qair', 0);
-    Qd_bin(k)   = i_getfield_or(st_cmd, 'Qd_bin', 0);
-    Qh_bin(k)   = i_getfield_or(st_cmd, 'Qh_bin', 0);
-    Qhx_cmd(k)  = i_getfield_or(st_cmd, 'Qhx', 0);
-    Tin_hx(k)   = i_getfield_or(st_cmd, 'Tin_hx', obs.T);
+    future = project_future(t, Env, k);
 
-    QCO2_del(k) = min(max(QCO2_cmd(k), 0), QCO2_max);
-    Qair_del(k) = min(max(Qair_cmd(k), 0), Qair_max);
+    [st_CtrlSignals, state] = ctrl.fn_pH_CO2(Timeline, obs, refs, env, future, st_CtrlSignals, state);
 
-    if isfield(st_cmd, 'Qd') && ~isempty(st_cmd.Qd)
-        Qd(k) = max(0, st_cmd.Qd);
-    else
-        Qd(k) = Qd_rate * (Qd_bin(k) > 0.5);
-    end
+    [st_CtrlSignals, state] = ctrl.fn_DO_air(Timeline, obs, refs, env, future, st_CtrlSignals, state);
 
-    if isfield(st_cmd, 'Qh') && ~isempty(st_cmd.Qh)
-        Qh(k) = max(0, st_cmd.Qh);
-    else
-        Qh(k) = Qh_rate * (Qh_bin(k) > 0.5);
-    end
+    [st_CtrlSignals, state] = ctrl.fn_HD(Timeline, obs, refs, env, future, st_CtrlSignals, state);
 
-    Qw_k = min(max(Qhx_cmd(k), Qw_min), Qw_max);
-    Tin_k = min(max(Tin_hx(k), Tin_min), Tin_max);
+    [st_CtrlSignals, state] = ctrl.fn_Temp_HX(Timeline, obs, refs, env, future, st_CtrlSignals, state);
 
-    uk = [QCO2_del(k); Qair_del(k); Qd(k); Qh(k); Qw_k; Tin_k];
+    QCO2_cmd(k) = st_CtrlSignals.Qco2;
+    Qair_cmd(k) = st_CtrlSignals.Qair;
+    Qd_bin(k)   = st_CtrlSignals.Qd_bin;
+    Qh_bin(k)   = st_CtrlSignals.Qh_bin;
+    Qhx_cmd(k)  = st_CtrlSignals.Qhx;
+    Tin_hx(k)   = st_CtrlSignals.Tin_hx;
 
-    try
-        step_out = F_step('x0', xk, 'p', [uk; dk]);
-        xk = full(step_out.xf);
-    catch ME
-        error('CasADi integration failed at k=%d: %s', k, ME.message);
-    end
+    QCO2_del(k) = QCO2_cmd(k);
+    Qair_del(k) = Qair_cmd(k);
+    Qd(k) = Qd_bin(k) * Qd_rate;
+    Qh(k) = Qh_bin(k) * Qh_rate;
 
-    xk = i_state_clip(xk, p);
+    uk = [QCO2_del(k); Qair_del(k); Qd(k); Qh(k); Qhx_cmd(k); Tin_hx(k)];
+
+    gt = full(growth_terms_fun(xk, uk, dk));
+    mu_I(k) = gt(1);
+    mu_T(k) = gt(2);
+    mu_pH(k) = gt(3);
+    mu_DO(k) = gt(4);
+    mu(k) = gt(5);
+    m(k) = gt(6);
+    P(k) = gt(7);
+    step_out = F_step('x0', xk, 'p', [uk; dk]);
+    xk = full(step_out.xf);
 end
 
 cum_air_L = cumsum(Qair_del * dt * 1000);
@@ -194,7 +159,6 @@ prod_areal_gm2_day = prod_g / max(days * area_m2, eps);
 harv_prod_areal_gm2_day = harv_total_g / max(days * area_m2, eps);
 harv_frac = 100 * harv_total_g / max(prod_g, eps);
 
-[mu_I, mu_T, mu_pH, mu_DO, mu, m, P] = i_growth_terms(Xalg, XO2, DIC, H, T, Depth, Env, p);
 [CO2, HCO3, CO3] = i_carbonate_species(DIC, H, T, p);
 
 results = struct();
@@ -259,86 +223,6 @@ results.J.T  = mean((T - refs.T).^2);
 
 end
 
-function F_step = i_build_integrator(ode_fun, dt)
-import casadi.*
-
-x = MX.sym('x', 7);
-up = MX.sym('up', 10);
-u = up(1:6);
-d = up(7:10);
-xdot = ode_fun(x, u, d);
-
-dae = struct('x', x, 'p', up, 'ode', xdot);
-opts = struct('tf', dt);%, 'abstol', 1e-8, 'reltol', 1e-6);
-F_step = integrator('F_step', 'rk', dae, opts);
-
-end
-
-function x0 = i_initial_state(p, Env)
-Xalg0 = 0.5 * 1e3; % tv: ref results 0.5; TABLE: 0.32 [g/l]
-XO20 = p.KH_O2_ref * p.p_atm * p.y_O2;
-DIC0 = 0.014; % v
-Cat0 = 1.672669964353326e+01; % p.Cat_in;
-H0 = 1.582e-05; % v
-T0 = Env.Temp_ext(1);
-Depth0 = 0.15;
-V0 = max(p.Vsump + 1e-2, p.A * Depth0 + p.Vsump);
-x0 = [Xalg0; XO20; DIC0; Cat0; H0; T0; V0];
-
-end
-
-function x = i_state_clip(x, p)
-x(1) = max(x(1), 1e-8);
-x(2) = max(x(2), 1e-10);
-x(3) = max(x(3), 1e-10);
-x(4) = max(x(4), 1e-10);
-x(5) = min(max(x(5), 1e-12), 1);
-x(6) = min(max(x(6), -5), 60);
-x(7) = max(x(7), p.Vsump + 1e-3);
-
-end
-
-function [mu_I, mu_T, mu_pH, mu_DO, mu, m, P] = i_growth_terms(Xalg, XO2, ~, H, T, Depth, Env, p)
-N = numel(Xalg);
-PAR = 0.46 * 4.56 * Env.RadG;
-
-Iav = zeros(N,1);
-for k = 1:N
-    den = p.Ka * max(Depth(k), 1e-6) * max(Xalg(k), 1e-8);
-    Iav(k) = PAR(k) / max(den, 1e-8) * (1 - exp(-den));
-end
-
-mu_I = Iav.^p.n_hill ./ (p.Ik^p.n_hill + Iav.^p.n_hill + 1e-12);
-mu_T = i_window_numeric(T, p.T_min, p.T_opt, p.T_max);
-pH = -log10(max(H, 1e-12) / 1000);
-mu_pH = i_window_numeric(pH, p.pH_min, p.pH_opt, p.pH_max);
-
-KH_O2 = p.KH_O2_ref * exp(p.C_O2 * (1./(T+273.15) - 1/p.T_ref));
-Xeq_O2 = KH_O2 * p.p_atm * p.y_O2;
-DO_sat = 100 * XO2 ./ max(Xeq_O2, 1e-12);
-mu_DO = max(0, 1 - (DO_sat / p.DO_max).^p.m_DO);
-
-P = p.mu_max .* mu_I .* mu_T .* mu_pH .* mu_DO;
-mu = p.eta_X .* P;
-m = p.m_min .* (1 + p.k_resp_I .* (1 - mu_I)) .* p.Q10.^((T - 20) / 10);
-
-end
-
-function w = i_window_numeric(x, a, b, c)
-w = zeros(size(x));
-
-idx1 = x > a & x <= b;
-r1 = (x(idx1) - a) / max(b - a, eps);
-w(idx1) = 3*r1.^2 - 2*r1.^3;
-
-idx2 = x > b & x < c;
-r2 = (c - x(idx2)) / max(c - b, eps);
-w(idx2) = 3*r2.^2 - 2*r2.^3;
-
-w = min(max(w, 0), 1);
-
-end
-
 function [CO2, HCO3, CO3] = i_carbonate_species(DIC, H, T, p)
 K1 = p.K1_ref * exp(-p.dH_K1/p.R_gas * (1./(T+273.15) - 1/p.T_ref));
 K2 = p.K2_ref * exp(-p.dH_K2/p.R_gas * (1./(T+273.15) - 1/p.T_ref));
@@ -348,68 +232,4 @@ CO2 = DIC .* H.^2 ./ max(Delta, 1e-16);
 HCO3 = DIC .* H .* K1 ./ max(Delta, 1e-16);
 CO3 = DIC .* K1 .* K2 ./ max(Delta, 1e-16);
 
-end
-
-function [t, Env] = i_build_time_and_env(Data)
-RadG = [];
-RadPAR = [];
-Temp_ext = [];
-RH = [];
-Wind = [];
-
-for i = 1:numel(Data)
-    if ~isfield(Data(i), 'u') || isempty(Data(i).u)
-        continue;
-    end
-
-    ui = double(Data(i).u);
-    if size(ui,2) < 5 && size(ui,1) >= 5
-        ui = ui.';
-    end
-    if size(ui,2) < 5
-        error('Data(%d).u must have at least 5 columns.', i);
-    end
-
-    RadG = [RadG; ui(:,1)]; %#ok<AGROW>
-    RadPAR = [RadPAR; ui(:,2)]; %#ok<AGROW>
-    Temp_ext = [Temp_ext; ui(:,3)]; %#ok<AGROW>
-    RH = [RH; ui(:,4)]; %#ok<AGROW>
-    Wind = [Wind; ui(:,5)]; %#ok<AGROW>
-end
-
-N = numel(RadG);
-t = (0:N-1).' * 60;
-
-Env = struct();
-Env.RadG = RadG;
-Env.RadPAR = RadPAR;
-Env.Temp_ext = Temp_ext;
-Env.RH = RH;
-Env.Wind = Wind;
-
-end
-
-function future = i_build_future(t, Env, k)
-h = min(60, numel(t) - k);
-idx = (k+1):(k+h);
-if isempty(idx)
-    idx = k;
-end
-
-future = struct();
-future.t_future = t(idx);
-future.RadGlobal = Env.RadG(idx);
-future.RadPAR = Env.RadPAR(idx);
-future.Temp_ext = Env.Temp_ext(idx);
-future.RH = Env.RH(idx);
-future.Wind = Env.Wind(idx);
-
-end
-
-function v = i_getfield_or(s, fname, default_value)
-if isstruct(s) && isfield(s, fname) && ~isempty(s.(fname))
-    v = s.(fname);
-else
-    v = default_value;
-end
 end
