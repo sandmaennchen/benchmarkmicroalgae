@@ -90,12 +90,16 @@ for k = 1:N
     X_gL(k) = yk(3);
     Depth(k) = yk(4);
 
+    T(k) = xk(6);
+    
     obs = struct();
     obs.pH = pH(k);
     obs.DO = DO(k);
     obs.Depth = Depth(k);
     obs.Xalg_gL = X_gL(k);
     obs.T = T(k);
+    % obs.T = Env.Temp_ext(k);
+    % obs
 
     Xalg(k) = xk(1);
     XO2(k) = xk(2);
