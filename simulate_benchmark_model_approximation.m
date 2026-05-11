@@ -89,7 +89,7 @@ for k = 1:N
     DO(k) = yk(2);
     X_gL(k) = yk(3);
     Depth(k) = yk(4);
-    
+
     obs = struct();
     obs.pH = pH(k);
     obs.DO = DO(k);
@@ -108,13 +108,13 @@ for k = 1:N
 
     future = project_future(t, Env, k);
 
-    [st_CtrlSignals, state] = ctrl.fn_pH_CO2(Timeline, obs, refs, env, future, st_CtrlSignals, state);
+    [st_CtrlSignals, state] = ctrl.fn_pH_CO2(Timeline, obs, refs, env, future, st_CtrlSignals, state); % Qco2
 
-    [st_CtrlSignals, state] = ctrl.fn_DO_air(Timeline, obs, refs, env, future, st_CtrlSignals, state);
+    [st_CtrlSignals, state] = ctrl.fn_DO_air(Timeline, obs, refs, env, future, st_CtrlSignals, state); % Qair
 
-    [st_CtrlSignals, state] = ctrl.fn_HD(Timeline, obs, refs, env, future, st_CtrlSignals, state);
+    [st_CtrlSignals, state] = ctrl.fn_HD(Timeline, obs, refs, env, future, st_CtrlSignals, state); % Qd_bin, Qh_bin
 
-    [st_CtrlSignals, state] = ctrl.fn_Temp_HX(Timeline, obs, refs, env, future, st_CtrlSignals, state);
+    [st_CtrlSignals, state] = ctrl.fn_Temp_HX(Timeline, obs, refs, env, future, st_CtrlSignals, state); % Qhx, Tin_hx
 
     QCO2_cmd(k) = st_CtrlSignals.Qco2;
     Qair_cmd(k) = st_CtrlSignals.Qair;
