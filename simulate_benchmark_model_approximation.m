@@ -153,18 +153,22 @@ cum_air_L = cumsum(Qair_del * dt * 1000);
 cum_CO2_L = cumsum(QCO2_del * dt * 1000);
 
 area_m2 = p.A;
-days = max(dt, t(end) - t(1)) / 86400;
+days = (t(end) - t(1)) / 86400;
 
 V_L = Depth * area_m2 * 1000;
-gain_g = (X_gL(end) * V_L(end)) - (X_gL(1) * V_L(1));
-prod_g = max(gain_g, 0);
+
+mass_in_pond_start = X_gL(1) * V_L(1);
+mass_in_pond_end   = X_gL(end) * V_L(end);
+
+gain_in_pond_g = mass_in_pond_end - mass_in_pond_start;
 cum_harv_g = cumsum(Qh * dt * 1000 .* X_gL);
 harv_total_g = cum_harv_g(end);
+prod_total_g = gain_in_pond_g + harv_total_g;
+prod_areal_gm2_day = prod_total_g / (days * area_m2);
+harv_frac = 100 * (harv_total_g / prod_total_g);
+acumm_rel = 100 * (X_gL(end) - X_gL(1)) / X_gL(1);
 
-acumm_rel = 100 * (X_gL(end) - X_gL(1)) / max(X_gL(1), eps);
-prod_areal_gm2_day = prod_g / max(days * area_m2, eps);
 harv_prod_areal_gm2_day = harv_total_g / max(days * area_m2, eps);
-harv_frac = 100 * harv_total_g / max(prod_g, eps);
 
 [CO2, HCO3, CO3] = i_carbonate_species(DIC, H, T, p);
 
@@ -191,9 +195,9 @@ results.cum_harv_g = cum_harv_g;
 results.total_air_L = cum_air_L(end);
 results.total_CO2_L = cum_CO2_L(end);
 
-results.gain_g = gain_g;
+results.gain_g = gain_in_pond_g;
 results.acumm_rel = acumm_rel;
-results.prod_g = prod_g;
+results.prod_g = prod_total_g;
 results.prod_areal_gm2_day = prod_areal_gm2_day;
 results.harv_total_g = harv_total_g;
 results.harv_frac = harv_frac;
