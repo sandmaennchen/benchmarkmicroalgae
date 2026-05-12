@@ -15,8 +15,9 @@ if ~isempty(Env.Temp_ext)
     p.T_in_medium = Env.Temp_ext(1);
 end
 
-[ode_fun, out_fun, growth_terms_fun] = build_ode(p);
-F_step = build_integrator(ode_fun, dt);
+[~, out_fun, growth_terms_fun] = build_ode(p);
+% F_step = build_integrator(ode_fun, dt);
+sim_solver = get_acados_simsolver();
 
 x0 = get_initial_state(p, Env);
 xk = x0;
@@ -143,8 +144,10 @@ for k = 1:N
     mu(k) = gt(5);
     m(k) = gt(6);
     P(k) = gt(7);
-    step_out = F_step('x0', xk, 'p', [uk; dk]);
-    xk = full(step_out.xf);
+    % step_out = F_step('x0', xk, 'p', [uk; dk]);
+    xn = acados_integrator(sim_solver, xk, uk, dk);
+    % xk = full(step_out.xf);
+    xk = full(xn);
 end
 
 cum_air_L = cumsum(Qair_del * dt * 1000);

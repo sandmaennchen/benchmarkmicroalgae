@@ -1,0 +1,28 @@
+# Matlab
+*.m~
+*.asv
+*.mat
+*.mex*
+*.o
+*.mexw64
+*.mexmaci64
+*.mexa64
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+build/
+dist/
+
+# acados generated code
+c_generated_code/
+*.json
+
