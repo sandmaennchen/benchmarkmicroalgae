@@ -31,8 +31,8 @@ V    = x(7);
 % Inputs
 QCO2   = u(1);
 Qair   = u(2);
-Qd     = u(3);
-Qh     = u(4);
+Qd     = u(3);  % on/off in original; for us in [0, 1]
+Qh     = u(4);  % on/off in original; for us in [0, 1]
 Qw     = u(5);
 Tin_hx = u(6);
 

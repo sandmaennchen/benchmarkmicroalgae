@@ -114,6 +114,7 @@ for k = 1:N
 
     future = project_future(t, Env, k);
 
+    % TODO: call controller here.
     [st_CtrlSignals, state_pH_CO2] = ctrl.fn_pH_CO2(Timeline, obs, refs, env, future, st_CtrlSignals, state_pH_CO2); % Qco2
 
     [st_CtrlSignals, state_DO_air] = ctrl.fn_DO_air(Timeline, obs, refs, env, future, st_CtrlSignals, state_DO_air); % Qair
